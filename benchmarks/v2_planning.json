@@ -1,0 +1,9 @@
+[
+  {
+    "id": "plan_two_step_goal",
+    "nl": "You can go from A to B, and from B to C. Can you reach C starting at A?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  }
+]

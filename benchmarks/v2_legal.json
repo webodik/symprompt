@@ -1,0 +1,9 @@
+[
+  {
+    "id": "simple_obligation",
+    "nl": "The contract states that if payment is late, a fee is due. Payment was late. Is a fee due?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  }
+]

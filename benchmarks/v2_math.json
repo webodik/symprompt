@@ -1,0 +1,16 @@
+[
+  {
+    "id": "simple_arithmetic_true",
+    "nl": "Is it true that 2 + 2 = 4?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "math"
+  },
+  {
+    "id": "simple_arithmetic_false",
+    "nl": "Is it true that 2 + 2 = 5?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "math"
+  }
+]

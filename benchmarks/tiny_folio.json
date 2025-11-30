@@ -1,0 +1,16 @@
+[
+  {
+    "id": "cats_mammals_animals",
+    "nl": "All mammals are animals. All cats are mammals. Therefore, all cats are animals.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "simple_math_true",
+    "nl": "Is 2 plus 2 equal to 4?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "math"
+  }
+]

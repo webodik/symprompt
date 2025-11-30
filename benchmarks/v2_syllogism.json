@@ -1,0 +1,9 @@
+[
+  {
+    "id": "all_cats_mammals_animals",
+    "nl": "All mammals are animals. All cats are mammals. Therefore, all cats are animals.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  }
+]
