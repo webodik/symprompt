@@ -16,7 +16,7 @@ class Predicate:
 class Ontology:
     predicates: List[Predicate] = field(default_factory=list)
     functions: List[Dict[str, Any]] = field(default_factory=list)
-    constants: List[Dict[str, Any]] = field(default_factory=list)
+    constants: List[str] = field(default_factory=list)
 
     def get_predicate(self, name: str) -> Optional[Predicate]:
         for predicate in self.predicates:

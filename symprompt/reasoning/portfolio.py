@@ -31,15 +31,20 @@ def run_portfolio(symil: SymIL, decision: PortfolioDecision | None = None) -> Di
 
     solver = decision.preferred_solver.lower()
 
-    # Tier 1: single-backend path based on profile.
+    # Tier 1: single-backend path based on profile, fallback to Z3 on UNKNOWN.
     if decision.tier == 1:
+        result = None
         if solver in {"asp", "clingo"}:
-            return run_asp(symil)
-        if solver in {"scallop", "datalog"}:
-            return run_scallop(symil)
-        if solver in {"vsa", "vector"}:
+            result = run_asp(symil)
+        elif solver in {"scallop", "datalog"}:
+            result = run_scallop(symil)
+        elif solver in {"vsa", "vector"}:
             vsa_result = run_vsa(symil)
-            return {"status": str(vsa_result.get("status", "UNKNOWN"))}
+            result = {"status": str(vsa_result.get("status", "UNKNOWN"))}
+
+        if result is not None and result.get("status") != "UNKNOWN":
+            return result
+        # Fallback to Z3 when preferred solver returns UNKNOWN
         return solve_symil(symil)
 
     # Tier 2: simple multi-backend portfolio with consensus-style aggregation.

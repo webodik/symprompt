@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import os
 from pathlib import Path
 
@@ -9,14 +10,27 @@ from openevolve.config import Config, LLMConfig, LLMModelConfig
 from openevolve import run_evolution
 
 from symprompt.evolution.backups import backup_database
+from symprompt.evolution.litellm_client import LiteLLMLLM
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Run router evolution.")
+    parser.add_argument(
+        "--iterations", "-n",
+        type=int,
+        default=None,
+        help="Number of evolution iterations (overrides config)",
+    )
+    args = parser.parse_args()
+
     load_dotenv()
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     config_path = root / "openevolve_config.yaml"
 
     config = Config.from_yaml(config_path)
+
+    if args.iterations is not None:
+        config.max_iterations = args.iterations
 
     model_name = (
         os.getenv("SYMPROMPT_LLM_MODEL")
@@ -27,6 +41,8 @@ def main() -> None:
     model_cfg = LLMModelConfig(
         name=model_name,
         weight=1.0,
+        init_client=LiteLLMLLM,
+        max_tokens=8192,
     )
     config.llm = LLMConfig(
         primary_model=model_name,
@@ -61,7 +77,7 @@ def main() -> None:
     )
 
     print("Router evolution finished.")
-    print("Best metrics:", result.best_metrics)
+    print("Best metrics:", result.metrics)
 
 
 if __name__ == "__main__":

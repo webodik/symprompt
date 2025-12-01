@@ -7,10 +7,276 @@
     "domain": "syllogism"
   },
   {
-    "id": "simple_math_true",
-    "nl": "Is 2 plus 2 equal to 4?",
+    "id": "dogs_mammals_animals",
+    "nl": "All mammals are animals. All dogs are mammals. Therefore, all dogs are animals.",
     "expected_result": "VALID",
     "ideal_tier": 1,
-    "domain": "math"
+    "domain": "syllogism"
+  },
+  {
+    "id": "birds_fly_penguins",
+    "nl": "All birds can fly. Penguins are birds. Therefore, penguins can fly.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "mortals_socrates",
+    "nl": "All humans are mortal. Socrates is a human. Therefore, Socrates is mortal.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "fish_swim",
+    "nl": "All fish can swim. Salmon are fish. Therefore, salmon can swim.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "philosophers_think",
+    "nl": "All philosophers think deeply. Plato is a philosopher. Therefore, Plato thinks deeply.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "metals_conduct",
+    "nl": "All metals conduct electricity. Copper is a metal. Therefore, copper conducts electricity.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "students_learn",
+    "nl": "All students study. Alice is a student. Therefore, Alice studies.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "plants_need_water",
+    "nl": "All plants need water. Roses are plants. Therefore, roses need water.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "invalid_reverse",
+    "nl": "All cats are mammals. All mammals are animals. Therefore, all animals are cats.",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "invalid_no_middle",
+    "nl": "All dogs bark. All cats meow. Therefore, all dogs are cats.",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "invalid_existential",
+    "nl": "Some birds are blue. Some blue things are cold. Therefore, some birds are cold.",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "chained_three",
+    "nl": "All reptiles are vertebrates. All vertebrates are animals. All snakes are reptiles. Therefore, all snakes are animals.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "negative_valid",
+    "nl": "No mammals are reptiles. All dogs are mammals. Therefore, no dogs are reptiles.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "negative_invalid",
+    "nl": "No cats are dogs. All dogs are animals. Therefore, no cats are animals.",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "vehicles_transport",
+    "nl": "All vehicles are used for transportation. All cars are vehicles. Therefore, all cars are used for transportation.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "athletes_train",
+    "nl": "All professional athletes train daily. Michael is a professional athlete. Therefore, Michael trains daily.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "doctors_degree",
+    "nl": "All doctors have medical degrees. Sarah is a doctor. Therefore, Sarah has a medical degree.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "planets_orbit",
+    "nl": "All planets orbit a star. Earth is a planet. Therefore, Earth orbits a star.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "triangles_angles",
+    "nl": "All triangles have three angles. This shape is a triangle. Therefore, this shape has three angles.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "invalid_undistributed",
+    "nl": "All roses are flowers. All tulips are flowers. Therefore, all roses are tulips.",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "invalid_affirm_consequent",
+    "nl": "All cats are furry. This animal is furry. Therefore, this animal is a cat.",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "lawyers_argue",
+    "nl": "All lawyers can argue in court. James is a lawyer. Therefore, James can argue in court.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "trees_have_roots",
+    "nl": "All trees have roots. An oak is a tree. Therefore, an oak has roots.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "rectangles_have_angles",
+    "nl": "All rectangles have four right angles. A square is a rectangle. Therefore, a square has four right angles.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "writers_read",
+    "nl": "All writers read extensively. Stephen is a writer. Therefore, Stephen reads extensively.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "teachers_educate",
+    "nl": "All teachers educate students. Ms. Johnson is a teacher. Therefore, Ms. Johnson educates students.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "musicians_practice",
+    "nl": "All musicians practice their instruments. David is a musician. Therefore, David practices his instrument.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "chained_four",
+    "nl": "All A are B. All B are C. All C are D. All X are A. Therefore, all X are D.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "invalid_deny_antecedent",
+    "nl": "If it rains, the ground is wet. It is not raining. Therefore, the ground is not wet.",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "modus_ponens",
+    "nl": "If it rains, the ground is wet. It is raining. Therefore, the ground is wet.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "modus_tollens",
+    "nl": "If it rains, the ground is wet. The ground is not wet. Therefore, it is not raining.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "disjunctive_valid",
+    "nl": "Either it is Monday or it is Tuesday. It is not Monday. Therefore, it is Tuesday.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "hypothetical_chain",
+    "nl": "If A then B. If B then C. A is true. Therefore, C is true.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "contrapositive",
+    "nl": "All dogs bark. This animal does not bark. Therefore, this animal is not a dog.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "transitive_property",
+    "nl": "Alice is taller than Bob. Bob is taller than Carol. Therefore, Alice is taller than Carol.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "fruits_grow_trees",
+    "nl": "All apples are fruits. All fruits grow on plants. Therefore, all apples grow on plants.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "insects_six_legs",
+    "nl": "All insects have six legs. A bee is an insect. Therefore, a bee has six legs.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "whales_mammals",
+    "nl": "All whales are mammals. All mammals breathe air. Therefore, all whales breathe air.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "diamonds_carbon",
+    "nl": "All diamonds are made of carbon. This gemstone is a diamond. Therefore, this gemstone is made of carbon.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
   }
 ]

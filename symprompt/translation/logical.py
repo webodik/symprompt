@@ -19,29 +19,65 @@ from symprompt.symil.model import (
 
 
 LOGICAL_SYSTEM_PROMPT = """
-You are a translator from natural language into a JSON-based logical
-intermediate language called SymIL.
+You are a translator from natural language into a JSON-based logical intermediate language called SymIL.
 
-Given:
-- A short piece of text describing logical relationships.
-- An ontology listing predicates.
-
-You must output ONLY a JSON object with the structure:
+Output ONLY valid JSON with this EXACT structure:
 {
-  "facts": [ ... ],
-  "rules": [ ... ],
-  "query": { ... },
-  "constraints": [ ... ]
+  "facts": [...],
+  "rules": [...],
+  "query": {...},
+  "constraints": [...]
+}
+
+FORMULA SYNTAX (use EXACTLY these keys):
+- Atom: {"pred": "name", "args": ["X", "Y"]}
+- Implication: {"implies": [<premise>, <conclusion>]}
+- Conjunction: {"and": [<formula>, <formula>, ...]}
+- Disjunction: {"or": [<formula>, <formula>, ...]}
+- Negation: {"not": <formula>}
+- Universal: {"forall": "X", "type": "entity", "body": <formula>}
+- Existential: {"exists": "X", "type": "entity", "body": <formula>}
+
+CRITICAL - VARIABLES vs CONSTANTS:
+- Variables: UPPERCASE like "X", "Y", "Z" - used in forall/exists quantifiers
+- Constants: lowercase like "socrates", "earth", "alice" - named entities from ontology
+
+RULE SYNTAX:
+{"forall": "X", "type": "entity", "body": {"implies": [<premise>, <conclusion>]}}
+
+QUERY SYNTAX:
+{"prove": <formula>}
+
+EXAMPLE 1 - "Socrates is human. All humans are mortal. Is Socrates mortal?":
+{
+  "facts": [{"pred": "human", "args": ["socrates"]}],
+  "rules": [
+    {"forall": "X", "type": "entity", "body": {"implies": [{"pred": "human", "args": ["X"]}, {"pred": "mortal", "args": ["X"]}]}}
+  ],
+  "query": {"prove": {"pred": "mortal", "args": ["socrates"]}},
+  "constraints": []
+}
+
+EXAMPLE 2 - "All mammals are animals. All cats are mammals. Therefore, all cats are animals.":
+{
+  "facts": [],
+  "rules": [
+    {"forall": "X", "type": "entity", "body": {"implies": [{"pred": "mammal", "args": ["X"]}, {"pred": "animal", "args": ["X"]}]}},
+    {"forall": "X", "type": "entity", "body": {"implies": [{"pred": "cat", "args": ["X"]}, {"pred": "mammal", "args": ["X"]}]}}
+  ],
+  "query": {"prove": {"forall": "X", "type": "entity", "body": {"implies": [{"pred": "cat", "args": ["X"]}, {"pred": "animal", "args": ["X"]}]}}},
+  "constraints": []
 }
 
 Rules:
-- Use only predicates defined in the ontology.
-- Use variable names like "X", "Y" (type "entity").
-- Use "implies" for conditional statements ("all ... are ...").
-- Use "forall" for universal statements.
- - For Level 0, prefer only facts + an atomic query and avoid rules.
- - For Level 1, restrict rules to simple Horn clauses.
- - For Level 2, you may emit full SymIL (nested quantifiers, constraints).
+- Use ONLY predicates from the provided ontology
+- Use ONLY constants from the provided ontology (lowercase!)
+- Variables (X, Y, Z): UPPERCASE, only inside forall/exists
+- Constants (socrates, earth): lowercase, for specific named entities
+- For Level 0: prefer facts + atomic query, avoid rules
+- For Level 1: use simple Horn clauses (forall with implies)
+- For Level 2: full SymIL with nested quantifiers
+- Output ONLY the JSON object, no explanation or markdown
 """
 
 
@@ -63,8 +99,7 @@ class LogicalTranslator:
                     }
                     for predicate in ontology.predicates
                 ],
-                "functions": [],
-                "constants": [],
+                "constants": ontology.constants if ontology.constants else [],
             }
         )
         prompt = LOGICAL_SYSTEM_PROMPT
@@ -99,59 +134,70 @@ class LogicalTranslator:
         )
 
     def _formula_from_json(self, data: Dict[str, Any]) -> Formula:
+        if not isinstance(data, dict):
+            raise ValueError(f"Formula must be a dict, got {type(data)}: {data}")
+
+        # Atom: {"pred": "name", "args": ["X", "Y"]}
         if "pred" in data:
             return Atom(pred=data["pred"], args=list(data.get("args", [])))
+
+        # Implication: {"implies": [<premise>, <conclusion>]}
         if "implies" in data:
-            premise_json, conclusion_json = data["implies"]
+            impl = data["implies"]
+            if not isinstance(impl, list) or len(impl) != 2:
+                raise ValueError(f"implies must be a list of 2 formulas: {data}")
             return Implies(
-                premise=self._formula_from_json(premise_json),
-                conclusion=self._formula_from_json(conclusion_json),
+                premise=self._formula_from_json(impl[0]),
+                conclusion=self._formula_from_json(impl[1]),
             )
+
+        # Conjunction: {"and": [<formula>, ...]}
         if "and" in data:
-            return And(
-                formulas=[self._formula_from_json(item) for item in data["and"]]
-            )
+            return And(formulas=[self._formula_from_json(f) for f in data["and"]])
+
+        # Disjunction: {"or": [<formula>, ...]}
         if "or" in data:
-            return Or(
-                formulas=[self._formula_from_json(item) for item in data["or"]]
-            )
+            return Or(formulas=[self._formula_from_json(f) for f in data["or"]])
+
+        # Negation: {"not": <formula>}
         if "not" in data:
             return Not(formula=self._formula_from_json(data["not"]))
+
+        # Universal: {"forall": "X", "type": "entity", "body": <formula>}
         if "forall" in data and "body" in data:
             return ForAll(
                 var=data["forall"],
                 type=data.get("type", "entity"),
                 body=self._formula_from_json(data["body"]),
             )
+
+        # Existential: {"exists": "X", "type": "entity", "body": <formula>}
         if "exists" in data and "body" in data:
             return Exists(
                 var=data["exists"],
                 type=data.get("type", "entity"),
                 body=self._formula_from_json(data["body"]),
             )
+
         raise ValueError(f"Unsupported formula JSON: {data}")
 
     def _rule_from_json(self, data: Dict[str, Any]) -> Rule:
-        if "forall" in data and "body" in data:
-            body_formula = self._formula_from_json(data["body"])
-            return Rule(
-                forall=data["forall"],
-                type=data.get("type", "entity"),
-                body=body_formula,
-            )
-        # Fallback: treat as Horn-style rule encoded directly as formula.
-        body_formula = self._formula_from_json(data)
-        return Rule(forall="X", type="entity", body=body_formula)
+        # Rule: {"forall": "X", "type": "entity", "body": <formula>}
+        if "forall" not in data or "body" not in data:
+            raise ValueError(f"Rule must have 'forall' and 'body' keys: {data}")
+        return Rule(
+            forall=data["forall"],
+            type=data.get("type", "entity"),
+            body=self._formula_from_json(data["body"]),
+        )
 
     def _query_from_json(self, data: Dict[str, Any] | None) -> Query | None:
         if data is None:
             return None
-        if "prove" in data:
-            formula = self._formula_from_json(data["prove"])
-            return Query(prove=formula)
-        # Allow direct formula as query.
-        formula = self._formula_from_json(data)
-        return Query(prove=formula)
+        # Query: {"prove": <formula>}
+        if "prove" not in data:
+            raise ValueError(f"Query must have 'prove' key: {data}")
+        return Query(prove=self._formula_from_json(data["prove"]))
 
     def _contains_exists(self, formula: Formula) -> bool:
         if isinstance(formula, Exists):

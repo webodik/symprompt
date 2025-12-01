@@ -38,9 +38,15 @@ class TranslationPipeline:
         try:
             return self.validator.validate(symil)
         except SymILValidationError as exc:
-            # Single refinement attempt: add a short hint describing the validator error.
+            # Build detailed refinement hints
             refined_hints = base_hints + [
-                f"Refinement hint: previous SymIL failed validation with error: {exc}."
+                f"REFINEMENT REQUIRED - Previous attempt failed validation.",
+                f"Error: {exc}",
+                "Common fixes:",
+                "- Constants must be lowercase (socrates not Socrates)",
+                "- Variables must be UPPERCASE (X, Y, Z) and only in forall/exists",
+                "- All args in facts must use constants from ontology",
+                "- All predicates must be defined in ontology",
             ]
             symil_refined = self.logical_translator.translate(
                 text, ontology, target_level=level, hints=refined_hints

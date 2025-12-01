@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from time import perf_counter
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Union
 
 import importlib.util
 import json
 import sys
+import traceback
+
+from openevolve.evaluation_result import EvaluationResult
 
 from symprompt.config import DEFAULT_EVALUATION_CONFIG
 from symprompt.integration.escalation import EscalationResult, translate_and_solve_with_escalation
@@ -82,20 +85,23 @@ def evaluate_system(
 
         decision: RoutingDecision = router.route(text, context=None)
         routing_total += 1
+        syntactic_total += 1
 
         start = perf_counter()
-        result, used_level = _translate_and_solve_with_escalation(
-            pipeline,
-            validator,
-            decision,
-            text,
-            solve_fn,
-            max_level=2,
-        )
+        try:
+            result, used_level = _translate_and_solve_with_escalation(
+                pipeline,
+                validator,
+                decision,
+                text,
+                solve_fn,
+                max_level=2,
+            )
+            syntactic_ok += 1
+        except Exception:
+            # Translation or validation failed - count as syntactic failure
+            result = {"status": "UNKNOWN"}
         elapsed_ms = (perf_counter() - start) * 1000.0
-
-        syntactic_total += 1
-        syntactic_ok += 1
 
         correct = str(result.get("status")) == expected
 
@@ -128,151 +134,259 @@ def evaluate_system(
     )
 
 
-def evaluate(program_path: str) -> Dict[str, float]:
+@dataclass
+class EvalResultWithArtifacts:
+    """Extended EvalResult that includes artifacts for LLM feedback."""
+    result: EvalResult
+    artifacts: Dict[str, str] = field(default_factory=dict)
+
+
+def evaluate_fast(
+    router: SmartRouter,
+    pipeline: TranslationPipeline,
+    benchmarks: List[Dict[str, object]],
+    collect_artifacts: bool = False,
+) -> Union[EvalResult, EvalResultWithArtifacts]:
+    """
+    Fast evaluation for evolution - no escalation, single attempt per benchmark.
+    Follows v2 architecture Tier 1 principles: fast path, single solver.
+    """
+    validator = SymILValidator()
+    from symprompt.symil.profiles import get_profile
+    from symprompt.reasoning.portfolio import PortfolioDecision
+
+    tier1_latencies: List[float] = []
+    tier1_total = tier1_correct = 0
+    syntactic_ok = syntactic_total = 0
+    routing_hits = routing_total = 0
+
+    # Artifacts collection
+    benchmark_results: List[str] = []
+    validation_errors: List[str] = []
+    failed_symils: List[str] = []
+
+    for i, item in enumerate(benchmarks):
+        text = str(item["nl"])
+        expected = str(item["expected_result"])
+        item_id = str(item.get("id", f"item_{i+1}"))
+
+        decision: RoutingDecision = router.route(text, context=None)
+        routing_total += 1
+        syntactic_total += 1
+
+        # Translation phase (includes LLM calls - not measured for latency)
+        symil = None
+        translation_error = None
+        symil_debug = None
+        try:
+            profile = get_profile(decision.profile_name)
+            hints = profile.translation_hints if profile else []
+            symil = pipeline.translate(text, level=decision.symil_level, hints=hints)
+            # Capture SymIL before validation for debugging
+            if collect_artifacts and symil:
+                symil_debug = {
+                    "facts": [str(f) for f in symil.facts],
+                    "rules": [str(r) for r in symil.rules],
+                    "query": str(symil.query) if symil.query else None,
+                    "constants": symil.ontology.constants if symil.ontology else [],
+                }
+            symil = validator.validate(symil)
+            syntactic_ok += 1
+        except Exception as e:
+            translation_error = str(e)
+            if collect_artifacts:
+                error_detail = f"[{item_id}] {translation_error}"
+                if symil_debug:
+                    error_detail += f"\nSymIL: {symil_debug}"
+                validation_errors.append(error_detail)
+
+        # Solver phase (inference latency - measured)
+        start = perf_counter()
+        try:
+            if symil is not None:
+                portfolio_decision = PortfolioDecision(
+                    tier=decision.tier,
+                    profile_name=decision.profile_name,
+                    preferred_solver=decision.preferred_solver,
+                )
+                result = run_portfolio(symil=symil, decision=portfolio_decision)
+            else:
+                result = {"status": "UNKNOWN"}
+        except Exception:
+            result = {"status": "UNKNOWN"}
+        elapsed_ms = (perf_counter() - start) * 1000.0
+
+        correct = str(result.get("status")) == expected
+        tier1_total += 1
+        tier1_latencies.append(elapsed_ms)
+        if correct:
+            tier1_correct += 1
+
+        ideal_tier = int(item.get("ideal_tier", decision.tier))
+        if correct and decision.tier == ideal_tier:
+            routing_hits += 1
+
+        # Collect benchmark result
+        if collect_artifacts:
+            status = "PASS" if correct else "FAIL"
+            solver_status = result.get("status", "UNKNOWN")
+            solver_error = result.get("error", "")
+            notes = []
+            if translation_error:
+                notes.append(f"translation_error={translation_error[:100]}")
+            if solver_error:
+                notes.append(f"solver_error={solver_error[:100]}")
+            notes_str = f" [{'; '.join(notes)}]" if notes else ""
+            benchmark_results.append(
+                f"{status} [{item_id}]: expected={expected} got={solver_status}{notes_str}"
+            )
+
+    benchmarks_count = len(benchmarks) if benchmarks else 1
+
+    eval_result = EvalResult(
+        tier1_accuracy=tier1_correct / tier1_total if tier1_total else 0.0,
+        tier1_coverage=tier1_total / benchmarks_count,
+        tier1_p95_latency_ms=_p95(tier1_latencies),
+        tier2_accuracy=0.0,
+        tier2_coverage=0.0,
+        tier2_p95_latency_ms=0.0,
+        syntactic_validity=syntactic_ok / syntactic_total if syntactic_total else 0.0,
+        routing_score=routing_hits / routing_total if routing_total else 0.0,
+    )
+
+    if not collect_artifacts:
+        return eval_result
+
+    artifacts: Dict[str, str] = {}
+    if benchmark_results:
+        artifacts["benchmark_results"] = "\n".join(benchmark_results)
+    if validation_errors:
+        artifacts["validation_errors"] = "\n".join(validation_errors)
+
+    return EvalResultWithArtifacts(result=eval_result, artifacts=artifacts)
+
+
+def evaluate(program_path: str) -> EvaluationResult:
     """
     OpenEvolve evaluator entrypoint.
 
-    Given a path to a candidate translation pipeline module, this:
-      - Loads the candidate TranslationPipeline class.
-      - Evaluates it on tiny_folio.json using SmartRouter + portfolio.
-      - Returns a metrics dict including combined_score and features.
+    Fast mode for evolution: uses only tiny_folio.json, no escalation,
+    no per-domain re-evaluation. Follows v2 architecture Tier 1 principles.
+
+    Returns EvaluationResult with metrics and artifacts for LLM feedback.
     """
     root = Path(__file__).resolve().parents[2]
 
-    benchmark_files = [
-        "tiny_folio.json",
-        "v2_syllogism.json",
-        "v2_math.json",
-        "v2_planning.json",
-        "v2_legal.json",
-    ]
+    # Fast mode: only tiny_folio.json for evolution speed
+    path = root / "benchmarks" / "tiny_folio.json"
+    if not path.exists():
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": "Benchmark file not found"},
+        )
 
-    benchmarks: list[Dict[str, object]] = []
-    for name in benchmark_files:
-        path = root / "benchmarks" / name
-        if not path.exists():
-            continue
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        if isinstance(data, list):
-            benchmarks.extend(data)
+    try:
+        benchmarks = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": f"Failed to load benchmarks: {e}"},
+        )
 
     if not benchmarks:
-        return {"combined_score": 0.0}
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": "No benchmarks found"},
+        )
 
     # Dynamically load candidate pipeline module from program_path
+    load_error = None
     try:
         spec = importlib.util.spec_from_file_location("candidate_pipeline", program_path)
         if spec is None or spec.loader is None:
-            return {"combined_score": 0.0}
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["candidate_pipeline"] = module
-        spec.loader.exec_module(module)
-    except Exception:
-        return {"combined_score": 0.0}
+            load_error = "Failed to create module spec"
+        else:
+            module = importlib.util.module_from_spec(spec)
+            sys.modules["candidate_pipeline"] = module
+            spec.loader.exec_module(module)
+    except Exception as e:
+        load_error = f"Module load error: {e}\n{traceback.format_exc()}"
+
+    if load_error:
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": load_error},
+        )
 
     pipeline_cls = getattr(module, "TranslationPipeline", None)
     if pipeline_cls is None:
-        return {"combined_score": 0.0}
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": "TranslationPipeline class not found in module"},
+        )
+
+    # Check for required methods
+    if not hasattr(pipeline_cls, "from_llm_client"):
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": "TranslationPipeline missing from_llm_client classmethod"},
+        )
 
     router = SmartRouter()
     llm_client = build_default_sync_client()
-    pipeline: TranslationPipeline = pipeline_cls.from_llm_client(llm_client)
 
-    # Global metrics
     try:
-        global_result = evaluate_system(router, pipeline, benchmarks)
-    except Exception:
-        code_len = float(len(Path(program_path).read_text(encoding="utf-8")))
-        return {"combined_score": 0.0, "complexity": code_len}
-
-    # Per-domain metrics
-    domains: Dict[str, List[Dict[str, object]]] = {}
-    for item in benchmarks:
-        domain = str(item.get("domain", "generic"))
-        domains.setdefault(domain, []).append(item)
-
-    domain_metrics: Dict[str, float] = {}
-    for domain, items in domains.items():
-        try:
-            domain_result = evaluate_system(router, pipeline, items)
-        except Exception:
-            continue
-        domain_accuracy = max(domain_result.tier1_accuracy, domain_result.tier2_accuracy)
-        domain_metrics[f"{domain}_accuracy"] = domain_accuracy
-        domain_metrics[f"{domain}_coverage"] = (
-            domain_result.tier1_coverage + domain_result.tier2_coverage
+        pipeline: TranslationPipeline = pipeline_cls.from_llm_client(llm_client)
+    except Exception as e:
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": f"Pipeline initialization failed: {e}"},
         )
 
-    # Global and tier-weighted accuracy.
-    global_accuracy = max(global_result.tier1_accuracy, global_result.tier2_accuracy)
-    tier1_acc_cov = global_result.tier1_accuracy * global_result.tier1_coverage
-    tier2_acc_cov = global_result.tier2_accuracy * global_result.tier2_coverage
-    tier_weighted_accuracy = 0.6 * tier1_acc_cov + 0.4 * tier2_acc_cov
+    # Check for translate method
+    if not hasattr(pipeline, "translate"):
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": "TranslationPipeline instance missing translate method"},
+        )
 
-    # Domain-weighted accuracy (for analysis and feature dimensions).
-    weights = DEFAULT_EVALUATION_CONFIG.domain_weights
-    total_weight = sum(weights.values())
-    weighted_accuracy = global_accuracy
-    if domain_metrics:
-        acc_sum = 0.0
-        for domain_name, weight in weights.items():
-            key = f"{domain_name}_accuracy"
-            acc_sum += weight * domain_metrics.get(key, global_accuracy)
-        weighted_accuracy = acc_sum / total_weight
+    # Fast evaluation with artifact collection
+    try:
+        eval_with_artifacts = evaluate_fast(router, pipeline, benchmarks, collect_artifacts=True)
+        eval_result = eval_with_artifacts.result
+        artifacts = eval_with_artifacts.artifacts
+    except Exception as e:
+        code_len = float(len(Path(program_path).read_text(encoding="utf-8")))
+        return EvaluationResult(
+            metrics={"combined_score": 0.0, "complexity": code_len},
+            artifacts={"error": f"Evaluation failed: {e}\n{traceback.format_exc()}"},
+        )
 
-    # Latency score, following the v2 architecture: Tier 1 is more
-    # heavily weighted and has a stricter target.
-    def _score_latency(p95_ms: float, target_ms: float) -> float:
-        if p95_ms <= 0.0:
-            return 0.0
-        if p95_ms <= target_ms:
-            return 1.0
-        return max(0.0, target_ms / p95_ms)
+    # Simple fitness: accuracy + syntactic validity
+    accuracy = eval_result.tier1_accuracy
+    syntactic = eval_result.syntactic_validity
+    latency_score = 1.0 if eval_result.tier1_p95_latency_ms < 50 else 50.0 / max(eval_result.tier1_p95_latency_ms, 1.0)
 
-    tier1_latency_score = _score_latency(
-        global_result.tier1_p95_latency_ms,
-        DEFAULT_EVALUATION_CONFIG.tier1_latency_target_ms,
-    )
-    tier2_latency_score = _score_latency(
-        global_result.tier2_p95_latency_ms,
-        DEFAULT_EVALUATION_CONFIG.tier2_latency_target_ms,
-    )
-    latency_score = 0.7 * tier1_latency_score + 0.3 * tier2_latency_score
-
-    routing_score = global_result.routing_score
-    syntactic = global_result.syntactic_validity
-
-    # Combined scalar fitness, matching the v2 architecture: accuracy,
-    # latency, routing, and syntactic validity.
     combined_score = (
-        0.50 * tier_weighted_accuracy
-        + 0.25 * latency_score
-        + 0.15 * routing_score
-        + 0.10 * syntactic
+        0.60 * accuracy
+        + 0.25 * syntactic
+        + 0.15 * latency_score
     )
 
-    # Complexity penalty for overly large candidate files.
+    # Complexity penalty
     code_text = Path(program_path).read_text(encoding="utf-8")
     code_len = float(len(code_text))
     max_len = 20000.0
     if code_len > max_len:
         combined_score *= max_len / code_len
 
-    metrics: Dict[str, float] = {
+    metrics = {
         "combined_score": combined_score,
-        "tier1_accuracy": global_result.tier1_accuracy,
-        "tier2_accuracy": global_result.tier2_accuracy,
+        "accuracy": accuracy,
         "syntactic_validity": syntactic,
-        "tier1_p95_latency_ms": global_result.tier1_p95_latency_ms,
-        "tier2_p95_latency_ms": global_result.tier2_p95_latency_ms,
-        "routing_score": routing_score,
-        "tier_weighted_accuracy": tier_weighted_accuracy,
-        "weighted_accuracy": weighted_accuracy,
-        "latency_score": latency_score,
+        "latency_ms": eval_result.tier1_p95_latency_ms,
+        "routing_score": eval_result.routing_score,
         "complexity": code_len,
     }
-    metrics.update(domain_metrics)
-    return metrics
+
+    return EvaluationResult(metrics=metrics, artifacts=artifacts)

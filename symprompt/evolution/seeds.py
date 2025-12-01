@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 from openevolve.config import Config
 from openevolve.database import DatabaseConfig, ProgramDatabase
@@ -15,6 +15,7 @@ class SeedProgram:
 
 
 def _load_database(config_path: Path, db_path: Path) -> ProgramDatabase | None:
+    """Load an existing OpenEvolve database from disk."""
     if not db_path.exists():
         return None
 
@@ -32,7 +33,10 @@ def _load_database(config_path: Path, db_path: Path) -> ProgramDatabase | None:
         random_seed=base_config.database.random_seed,
         log_prompts=base_config.database.log_prompts,
     )
-    return ProgramDatabase(db_cfg)
+    db = ProgramDatabase(db_cfg)
+    # Load programs from disk into memory
+    db.load(str(db_path))
+    return db
 
 
 def extract_top_programs(

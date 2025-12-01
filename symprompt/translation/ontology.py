@@ -8,22 +8,33 @@ from symprompt.symil.model import Ontology, Predicate
 
 ONTOLOGY_SYSTEM_PROMPT = """
 You are an ontology designer for a logic reasoning system.
-Read the text and extract a minimal set of logical predicates
-and constants that will be used to formalize the text.
+Read the text and extract predicates and named constants.
 
 Output ONLY a JSON object:
 {
   "predicates": [
     {"name": "mammal", "arity": 1, "types": ["entity"], "description": "X is a mammal"}
   ],
-  "functions": [],
-  "constants": []
+  "constants": ["socrates", "earth", "alice"]
 }
 
-Rules:
-- Use lowercase predicate names without spaces.
-- Assume all predicates have arity 1 and type "entity" for now.
-- Do NOT include comments or extra keys.
+EXAMPLE - "Socrates is a human. All humans are mortal.":
+{
+  "predicates": [
+    {"name": "human", "arity": 1, "types": ["entity"], "description": "X is human"},
+    {"name": "mortal", "arity": 1, "types": ["entity"], "description": "X is mortal"}
+  ],
+  "constants": ["socrates"]
+}
+
+CRITICAL RULES:
+- Predicate names: lowercase, no spaces (e.g., "can_fly", "is_mammal")
+- Constants: lowercase named entities from the text (e.g., "socrates", "earth", "alice")
+  - "Socrates" -> "socrates"
+  - "Earth" -> "earth"
+  - "James" -> "james"
+- Arity is typically 1; use 2 for relations (e.g., "taller_than(X, Y)")
+- Do NOT include "functions" key - only "predicates" and "constants"
 """
 
 
@@ -48,5 +59,9 @@ class OntologyExtractor:
             )
             for predicate_json in predicates_json
         ]
-        return Ontology(predicates=predicates)
+        # Extract constants (lowercase named entities)
+        constants: List[str] = [
+            str(c).lower() for c in data.get("constants", [])
+        ]
+        return Ontology(predicates=predicates, constants=constants)
 
