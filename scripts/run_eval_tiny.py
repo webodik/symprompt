@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from symprompt.evolution.eval_pipeline import EvalResult, evaluate_system
 from symprompt.router.smart_router import SmartRouter
 from symprompt.translation.pipeline import TranslationPipeline
@@ -11,6 +13,8 @@ from symprompt.llm.sync_client import build_default_sync_client
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
+    # Load .env from repo root for LLM configuration
+    load_dotenv(root / ".env")
     benchmarks_path = root / "benchmarks" / "tiny_folio.json"
     benchmarks = json.loads(benchmarks_path.read_text(encoding="utf-8"))
 

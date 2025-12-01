@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Any, Dict, List
 
@@ -77,13 +78,24 @@ class LiteLLMSyncClient:
 
 def build_default_sync_client() -> LiteLLMSyncClient:
     cfg = DEFAULT_LLM_CONFIG
+    # Allow environment overrides for evolution / long runs
+    timeout_env = os.getenv("SYMPROMPT_LLM_TIMEOUT_SECONDS")
+    retries_env = os.getenv("SYMPROMPT_LLM_RETRIES")
+    try:
+        timeout_seconds = int(timeout_env) if timeout_env is not None else cfg.timeout_seconds
+    except ValueError:
+        timeout_seconds = cfg.timeout_seconds
+    try:
+        retries = int(retries_env) if retries_env is not None else cfg.retries
+    except ValueError:
+        retries = cfg.retries
+
     return LiteLLMSyncClient(
         model_name=cfg.model_name,
         temperature=cfg.temperature,
         top_p=cfg.top_p,
         max_tokens=cfg.max_tokens,
-        timeout_seconds=cfg.timeout_seconds,
-        retries=cfg.retries,
+        timeout_seconds=timeout_seconds,
+        retries=retries,
         retry_delay_seconds=cfg.retry_delay_seconds,
     )
-

@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from symprompt.evolution.seeds import SeedProgram, extract_top_programs
 
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
+    # Load .env from repo root (for any downstream config usage)
+    load_dotenv(root / ".env")
     config_path = root / "openevolve_config.yaml"
     output_dir = root / "evolution" / "openevolve_output"
     db_path = output_dir / "evolution.db"
@@ -29,4 +33,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

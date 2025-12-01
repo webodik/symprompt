@@ -43,11 +43,12 @@ def main() -> None:
     if args.iterations is not None:
         config.max_iterations = args.iterations
 
-    model_name = (
-        os.getenv("SYMPROMPT_LLM_MODEL")
-        or config.llm.primary_model
-        or "openrouter/x-ai/grok-4.1-fast:free"
-    )
+    model_name = os.getenv("SYMPROMPT_LLM_MODEL")
+    if not model_name:
+        raise RuntimeError(
+            "SYMPROMPT_LLM_MODEL must be set (e.g., via .env or EVOLVE_LLM_MODEL) "
+            "before running router evolution."
+        )
 
     model_cfg = LLMModelConfig(
         name=model_name,

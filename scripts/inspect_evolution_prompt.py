@@ -4,6 +4,8 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from dotenv import load_dotenv
+
 from openevolve.config import Config, DatabaseConfig
 from openevolve.database import Program, ProgramDatabase
 from openevolve.prompt.sampler import PromptSampler
@@ -157,6 +159,8 @@ def main() -> None:
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[1]
+    # Load .env from repo root so any LLM-dependent components use the same config
+    load_dotenv(root / ".env")
     config_path = root / "openevolve_config.yaml"
 
     if not config_path.exists():
@@ -199,4 +203,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

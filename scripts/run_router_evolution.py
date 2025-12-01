@@ -21,6 +21,9 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Suppress verbose LiteLLM logging before any imports
 logging.getLogger("LiteLLM").setLevel(logging.WARNING)
@@ -28,8 +31,12 @@ logging.getLogger("litellm").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
+# Ensure .env at repo root is loaded for all scripts
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env")
+
 # Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(ROOT))
 
 
 def main() -> None:
@@ -37,9 +44,11 @@ def main() -> None:
     iterations_str = os.environ.get("EVOLVE_ITERATIONS")
     resume = os.environ.get("EVOLVE_RESUME", "").lower() in ("1", "true", "yes")
 
-    # Set model via SYMPROMPT_LLM_MODEL (used by the runner)
+    # Set model via SYMPROMPT_LLM_MODEL (used by the runner).
+    # EVOLVE_LLM_MODEL is a convenience alias for this script only.
+    # If SYMPROMPT_LLM_MODEL is already set, do not override it.
     llm_model = os.environ.get("EVOLVE_LLM_MODEL")
-    if llm_model:
+    if llm_model and "SYMPROMPT_LLM_MODEL" not in os.environ:
         os.environ["SYMPROMPT_LLM_MODEL"] = llm_model
 
     # Build argv for the runner
