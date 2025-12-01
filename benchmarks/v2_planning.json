@@ -1,7 +1,105 @@
 [
   {
-    "id": "plan_two_step_goal",
-    "nl": "You can go from A to B, and from B to C. Can you reach C starting at A?",
+    "id": "plan_block_stack",
+    "nl": "Block A is on the table. Block B is on A. To move a block, it must be clear. A block is clear if nothing is on it. B is clear. Can we move B?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_block_not_clear",
+    "nl": "Block A is on the table. Block B is on A. To move a block, it must be clear. A block is clear if nothing is on it. Can we move A?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_robot_location",
+    "nl": "The robot is in room A. To pick up an object, the robot must be in the same room as the object. The box is in room B. Can the robot pick up the box?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_precondition_met",
+    "nl": "To open a door, you need a key. Alice has a key. Can Alice open the door?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_precondition_not_met",
+    "nl": "To open a door, you need a key. Bob does not have a key. Can Bob open the door?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_sequence_valid",
+    "nl": "To bake a cake, you must first mix ingredients. To mix ingredients, you need flour and eggs. We have flour and eggs. Can we bake a cake?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_sequence_invalid",
+    "nl": "To bake a cake, you must first mix ingredients. To mix ingredients, you need flour and eggs. We have flour but no eggs. Can we bake a cake?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_goal_reachable",
+    "nl": "The light is off. Flipping the switch turns the light on. We flip the switch. Is the light on?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_resource_constraint",
+    "nl": "Building a house requires 100 bricks. We have 50 bricks. Can we build a house?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_mutual_exclusion",
+    "nl": "A person can be in only one room at a time. John is in the kitchen. Is John in the bedroom?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_effect_chain",
+    "nl": "Pressing button A activates system B. Activating system B opens door C. We press button A. Is door C open?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_conditional_effect",
+    "nl": "If the battery is charged, pressing the button starts the car. The battery is charged. We press the button. Does the car start?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_blocked_action",
+    "nl": "To cross the bridge, it must not be broken. The bridge is broken. Can we cross the bridge?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_inventory",
+    "nl": "To craft a sword, you need iron and wood. The blacksmith has iron but no wood. Can the blacksmith craft a sword?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "plan_state_persistence",
+    "nl": "The door is locked. Unlocking the door makes it unlocked. We unlock the door. The door remains unlocked unless locked again. Is the door unlocked?",
     "expected_result": "VALID",
     "ideal_tier": 2,
     "domain": "planning"

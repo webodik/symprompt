@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import os
+import signal
+import sys
 import uuid
 from pathlib import Path
 from typing import List
@@ -16,6 +19,49 @@ from openevolve.database import Program
 from symprompt.evolution.backups import backup_database
 from symprompt.evolution.litellm_client import LiteLLMLLM
 from symprompt.evolution.seeds import extract_top_programs, SeedProgram
+
+# Suppress verbose LiteLLM logging
+logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+logging.getLogger("litellm").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+# Global controller reference for graceful shutdown
+_controller: OpenEvolve | None = None
+_shutdown_requested = False
+
+
+def _handle_shutdown(signum: int, frame) -> None:
+    """Handle shutdown signals gracefully."""
+    global _shutdown_requested
+    sig_name = signal.Signals(signum).name
+
+    if _shutdown_requested:
+        print(f"\n[{sig_name}] Force exit requested, terminating immediately...")
+        sys.exit(1)
+
+    _shutdown_requested = True
+    print(f"\n[{sig_name}] Graceful shutdown requested...")
+    print("Saving database state before exit (press Ctrl+C again to force exit)...")
+
+    if _controller is not None:
+        try:
+            # Save database immediately
+            db_path = _controller.database.config.db_path
+            if db_path:
+                _controller.database.save(db_path)
+                print(f"Database saved to {db_path}")
+
+            # Save best program info
+            if _controller.database.best_program_id:
+                best = _controller.database.get(_controller.database.best_program_id)
+                if best:
+                    print(f"Best program: {best.id[:8]}... score={best.metrics.get('combined_score', 0):.4f}")
+        except Exception as e:
+            print(f"Error saving state: {e}")
+
+    print("Shutdown complete.")
+    sys.exit(0)
 
 
 async def run_evolution_with_final_save(
@@ -37,12 +83,15 @@ async def run_evolution_with_final_save(
     Seeds are injected into the database before evolution starts, allowing
     the best programs from previous runs to serve as starting points.
     """
+    global _controller
+
     controller = OpenEvolve(
         initial_program_path=initial_program,
         evaluation_file=evaluator,
         config=config,
         output_dir=output_dir,
     )
+    _controller = controller  # Set for graceful shutdown
 
     # Inject seeds into database before evolution starts
     if seeds and not checkpoint_path:
@@ -75,6 +124,10 @@ async def run_evolution_with_final_save(
 
 
 def main() -> None:
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, _handle_shutdown)
+    signal.signal(signal.SIGTERM, _handle_shutdown)
+
     parser = argparse.ArgumentParser(description="Run translation pipeline evolution.")
     parser.add_argument(
         "--iterations", "-n",

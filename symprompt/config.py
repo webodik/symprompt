@@ -12,9 +12,9 @@ class LLMConfig:
     temperature: float = 0.3
     top_p: float = 0.9
     max_tokens: int = 2048
-    timeout_seconds: int = 60
-    retries: int = 2
-    retry_delay_seconds: float = 1.0
+    timeout_seconds: int = 900
+    retries: int = 10
+    retry_delay_seconds: float = 5.0
     random_seed: Optional[int] = None
 
 
@@ -41,12 +41,14 @@ class EvaluationConfig:
 
     tier1_latency_target_ms: float = 50.0
     tier2_latency_target_ms: float = 500.0
-    domain_weights: Dict[str, float] = field(default_factory=lambda: {
-        "syllogism": 0.2,
-        "math": 0.3,
-        "planning": 0.3,
-        "legal": 0.2,
-    })
+    domain_weights: Dict[str, float] = field(
+        default_factory=lambda: {
+            "syllogism": 0.2,
+            "math": 0.3,
+            "planning": 0.3,
+            "legal": 0.2,
+        }
+    )
 
 
 @dataclass

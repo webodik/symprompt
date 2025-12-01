@@ -84,7 +84,14 @@ Evolution targets three components:
 2. **SmartRouter**: Feature thresholds, tier selection (`run_router_evolution.py`)
 3. **SymILProfiles**: Domain vocabularies, solver preferences (`run_profile_evolution.py`)
 
+### Phase 1 Fitness (current - Tier 1 focus)
 Fitness function in `symprompt/evolution/eval_pipeline.py` combines:
+- Accuracy (60%) - Tier 1 accuracy on syllogism benchmarks
+- Latency score (15%) - Bonus for <50ms P95 latency
+- Routing score (15%) - Correct tier selection for each benchmark
+- Syntactic validity (10%) - SymIL parses without errors
+
+### Phase 2+ Fitness (future - full system)
 - Tier-weighted accuracy (50%)
 - Latency score (25%)
 - Routing score (15%)

@@ -1,9 +1,107 @@
 [
   {
-    "id": "simple_obligation",
-    "nl": "The contract states that if payment is late, a fee is due. Payment was late. Is a fee due?",
+    "id": "legal_obligation_fulfilled",
+    "nl": "All employees are obligated to report to work by 9am. John is an employee. John reported to work at 8:30am. Did John fulfill his obligation?",
     "expected_result": "VALID",
     "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_obligation_violated",
+    "nl": "All drivers are obligated to stop at red lights. Mary is a driver. Mary did not stop at the red light. Did Mary violate her obligation?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_permission_granted",
+    "nl": "Adults are permitted to vote. Sarah is an adult. Is Sarah permitted to vote?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_prohibition_applies",
+    "nl": "Minors are prohibited from purchasing alcohol. Tom is a minor. Is Tom prohibited from purchasing alcohol?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_exception_applies",
+    "nl": "All vehicles must pay tolls, except emergency vehicles. An ambulance is an emergency vehicle. Must an ambulance pay tolls?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_conflict_resolution",
+    "nl": "Parking is prohibited on weekdays. Parking is permitted on holidays. Today is a weekday and a holiday. Is parking permitted?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_conditional_obligation",
+    "nl": "If you earn income, you are obligated to file taxes. Bob earns income. Is Bob obligated to file taxes?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_delegation",
+    "nl": "A manager can delegate tasks to employees. Jane is a manager. Can Jane delegate tasks to employees?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_right_implies_duty",
+    "nl": "If someone has a right to privacy, others have a duty not to invade it. Alice has a right to privacy. Do others have a duty not to invade Alice's privacy?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_capacity",
+    "nl": "To sign a contract, one must have legal capacity. Minors lack legal capacity. Is a minor able to sign a contract?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_precedence",
+    "nl": "Constitutional law takes precedence over statutory law. This statute conflicts with the constitution. Does the constitution prevail?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_burden_of_proof",
+    "nl": "In criminal cases, the prosecution must prove guilt. The prosecution has not proven guilt. Is the defendant guilty?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_consent",
+    "nl": "Medical procedures require patient consent. The patient has given consent. Can the procedure proceed?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_liability",
+    "nl": "Property owners are liable for injuries on their property due to negligence. The owner was negligent. A visitor was injured. Is the owner liable?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "legal_statute_of_limitations",
+    "nl": "Claims must be filed within 2 years. The incident occurred 3 years ago. Can the claim be filed?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
     "domain": "legal"
   }
 ]

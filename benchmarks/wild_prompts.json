@@ -1,0 +1,107 @@
+[
+  {
+    "id": "wild_mixed_domain",
+    "nl": "All scientists who publish papers are researchers. Einstein published papers. Einstein was also a patent clerk. Was Einstein a researcher?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_negation_scope",
+    "nl": "It is not the case that all birds fly. Penguins are birds. Can we conclude that penguins do not fly?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 2,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_implicit_premise",
+    "nl": "Socrates is a man. All men are mortal. What can we conclude about Socrates?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_temporal_reasoning",
+    "nl": "Before becoming president, Obama was a senator. All senators are politicians. Was Obama ever a politician?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "planning"
+  },
+  {
+    "id": "wild_counterfactual",
+    "nl": "If pigs could fly, then the sky would have pigs. Pigs cannot fly. Does the sky have pigs?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_ambiguous_quantifier",
+    "nl": "Every student passed some exam. John is a student. Did John pass an exam?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_real_world_knowledge",
+    "nl": "Water freezes at 0 degrees Celsius. The temperature is -5 degrees Celsius. Is the water frozen?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "math"
+  },
+  {
+    "id": "wild_compound_conditions",
+    "nl": "To graduate, students must complete coursework AND pass the final exam. Alice completed coursework but failed the final exam. Can Alice graduate?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "planning"
+  },
+  {
+    "id": "wild_disjunctive_premise",
+    "nl": "Either the butler or the maid committed the crime. The butler has an alibi. Who committed the crime?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_nested_quantifiers",
+    "nl": "For every person, there exists someone who loves them. Does everyone have someone who loves them?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_casual_phrasing",
+    "nl": "Cats are mammals, right? And mammals are warm-blooded. So cats must be warm-blooded, yeah?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_double_negation",
+    "nl": "It is not true that no students failed. Therefore, some students failed.",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "syllogism"
+  },
+  {
+    "id": "wild_comparative",
+    "nl": "Alice is smarter than Bob. Bob is smarter than Carol. Is Alice smarter than Carol?",
+    "expected_result": "VALID",
+    "ideal_tier": 1,
+    "domain": "math"
+  },
+  {
+    "id": "wild_modal_possibility",
+    "nl": "It is possible that it will rain tomorrow. It is possible that it will not rain tomorrow. Is the weather tomorrow uncertain?",
+    "expected_result": "VALID",
+    "ideal_tier": 2,
+    "domain": "legal"
+  },
+  {
+    "id": "wild_set_membership",
+    "nl": "The set of prime numbers includes 2, 3, 5, 7, and 11. Is 4 a prime number?",
+    "expected_result": "NOT_VALID",
+    "ideal_tier": 1,
+    "domain": "math"
+  }
+]

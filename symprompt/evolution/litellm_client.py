@@ -129,10 +129,12 @@ class LiteLLMLLM(LLMInterface):
                     )
                     await asyncio.sleep(retry_delay)
                 else:
+                    # Return empty string instead of crashing the worker process
                     logger.error(
-                        "LiteLLM timeout after %s attempts", retries + 1
+                        "LiteLLM timeout after %s attempts (returning empty response)",
+                        retries + 1,
                     )
-                    raise
+                    return ""
             except Exception as exc:
                 if attempt < retries:
                     logger.warning(
@@ -143,7 +145,11 @@ class LiteLLMLLM(LLMInterface):
                     )
                     await asyncio.sleep(retry_delay)
                 else:
+                    # Return empty string instead of crashing the worker process
+                    # This allows OpenEvolve to continue with other iterations
                     logger.error(
-                        "LiteLLM error after %s attempts: %s", retries + 1, exc
+                        "LiteLLM error after %s attempts: %s (returning empty response)",
+                        retries + 1,
+                        exc,
                     )
-                    raise
+                    return ""

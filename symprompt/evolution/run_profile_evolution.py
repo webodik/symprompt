@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from pathlib import Path
 
@@ -11,6 +12,12 @@ from openevolve import run_evolution
 
 from symprompt.evolution.backups import backup_database
 from symprompt.evolution.litellm_client import LiteLLMLLM
+
+# Suppress verbose LiteLLM logging
+logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+logging.getLogger("litellm").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def main() -> None:

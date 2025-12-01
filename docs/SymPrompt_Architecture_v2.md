@@ -355,11 +355,51 @@ In v2.0, OpenEvolve optimizes **three evolvable targets**: the Translation Pipel
 
 ## **6.2 Multi-Objective Fitness Function**
 
-def fitness(system: SymPromptSystem, benchmarks: BenchmarkSuite) \-\> float:
+The fitness function evolves across phases:
+
+### **Phase 1 Fitness (Tier 1 Focus)**
+
+For SymPrompt-Lite evolution, the fitness prioritizes translation quality:
+
+def fitness\_phase1(pipeline, benchmarks) \-\> float:
+
+    results \= evaluate\_tier1(pipeline, benchmarks)
+
+
+
+    accuracy \= results.tier1\_accuracy
+
+    syntactic \= results.syntactic\_validity
+
+    routing \= results.routing\_score
+
+    latency\_score \= 1.0 if results.p95\_latency \< 50 else 50.0 / results.p95\_latency
+
+
+
+    \# Combined fitness: accuracy-focused for translation pipeline evolution
+
+    return (
+
+        0.60 \* accuracy \+
+
+        0.15 \* latency\_score \+
+
+        0.15 \* routing \+
+
+        0.10 \* syntactic
+
+    )
+
+### **Phase 2+ Fitness (Full System)**
+
+Once Tier 2 and router evolution begin, the fitness expands:
+
+def fitness\_full(system, benchmarks) \-\> float:
 
     results \= evaluate\_all(system, benchmarks)
 
-    
+
 
     \# Tier-weighted accuracy
 
@@ -369,7 +409,7 @@ def fitness(system: SymPromptSystem, benchmarks: BenchmarkSuite) \-\> float:
 
     accuracy \= 0.6 \* tier1\_acc \+ 0.4 \* tier2\_acc
 
-    
+
 
     \# Latency score (Tier 1 must be fast)
 
@@ -381,13 +421,13 @@ def fitness(system: SymPromptSystem, benchmarks: BenchmarkSuite) \-\> float:
 
     )
 
-    
+
 
     \# Routing quality (did router choose correctly?)
 
     routing\_score \= evaluate\_routing\_decisions(results)
 
-    
+
 
     \# Combined fitness
 
@@ -468,4 +508,150 @@ The key architectural decisions:
 
 This architecture provides a practical path from SymPrompt-Lite (immediately usable) to full SymPrompt (research-grade). The two-tier design ensures the system is **useful from day one** while evolution discovers increasingly sophisticated translation strategies over time.
 
-**Next Steps:** Implement SymPrompt-Lite (Phase 1\) to validate the core architecture before investing in full OpenEvolve integration.
+* IMPORTANT NOTES
+In practice, “discovering the best program” with SymPrompt + OpenEvolve mostly means:
+
+> you’ve automatically found a **translation algorithm** (NL → SymIL → solver) that is *much better* than anything you would have hand‑written, and you can now treat it as a reusable reasoning engine.
+
+Here’s what that actually gives you in the real world.
+
+---
+
+## 1. Much more reliable reasoning from your LLM
+
+Logic‑LM already showed that just improving the **translation to logic + solver** can boost end‑to‑end logical accuracy by ~39 percentage points over a plain LLM with chain‑of‑thought. ([arXiv][1])
+SymPrompt is doing the same thing, but with:
+
+* a more expressive IL (SymIL),
+* multiple solvers,
+* and an **evolved** translator instead of a hand‑crafted one. 
+
+If OpenEvolve finds a translation pipeline that hits your targets (e.g. >90% syntactic validity, >85% logical equivalence on FOLIO/MALLS):
+
+* Your LLM can **answer logic‑heavy questions with solver‑verified guarantees**,
+* Translation errors (bad SymIL) become rare instead of constant,
+* Reasoning performance degrades much less on hard, multi‑hop problems (the Logic‑LM effect). ([OpenReview][2])
+
+Practically: for anything that looks like “is this argument valid?”, “what follows from these rules?”, “can these constraints all hold?”, you get answers that behave more like a theorem prover than a chat model.
+
+---
+
+## 2. A reusable “compiler brain” for logic across all your prompts
+
+SymPrompt explicitly frames the problem as: find a good **intermediate language + compiler** from NL to logic (SymIL), because the “intermediate language problem” shows that IL choice and translation strategy can swing execution accuracy by up to ~50% on the same tasks. ([arXiv][3])
+
+Once OpenEvolve has discovered a strong pipeline:
+
+* You effectively own a **domain‑agnostic NL→SymIL compiler**.
+* Any LLM prompt that matches your router’s “symbolic” patterns can be routed through it, regardless of surface wording.
+* You can plug that same compiler into:
+
+  * Z3 for verification,
+  * (later) ASP/Clingo for planning,
+  * Scallop/VSA for differentiable or probabilistic reasoning. 
+
+That means the evolution effort is a **one‑time investment** that yields a reusable reasoning substrate, not just a one‑off benchmark trick.
+
+---
+
+## 3. Stronger guarantees and guardrails for LLM outputs
+
+With a good program in place, you can use SymPrompt not just as a “pre‑processor” but as a **safety / correctness guardrail**:
+
+* **Pre‑processing mode**:
+
+  * NL question → SymIL → solver → correct answer → LLM explains.
+  * LLM never has to “guess” the core logic; it just talks about a solver‑verified result.
+
+* **Post‑processing mode**:
+
+  * LLM proposes an answer, SymPrompt extracts its logical claims and tries to verify them.
+  * If solver says INVALID/unsatisfiable, you force a re‑generation or mark the answer as low‑confidence.
+
+In both cases, the “best program” you discovered directly translates into **fewer hallucinations about logic**, more consistent answers, and the ability to say “I actually checked that with a solver” rather than trusting the model’s internal reasoning.
+
+---
+
+## 4. Faster, cheaper reasoning for a given quality level
+
+OpenEvolve is not just optimizing for correctness; it’s a **multi‑objective search** over accuracy *and* latency/cost. ([GitHub][4])
+
+Practically, a good discovered pipeline might:
+
+* Use fewer LLM calls (or shorter prompts) to get the same SymIL quality.
+* Choose a simpler SymIL *profile* for easy cases and richer constructs only when needed.
+* Minimize p95 translation time below your target (e.g. <200 ms).
+
+So the “best program” is often not the most sophisticated; it’s the one that hits the **sweet spot**: high syntactic validity + solver success, with acceptable latency. That directly impacts:
+
+* how responsive your personal tool feels,
+* how much API money you burn,
+* and whether you can run this in a tight online loop instead of batch mode.
+
+---
+
+## 5. Domain‑specialized reasoning “skills” for free
+
+OpenEvolve can evolve **different pipelines on different benchmark mixes** (law, math, planning, etc.). Once you see that:
+
+* Pipeline A is best on syllogistic/FOLIO‑style tasks,
+* Pipeline B is best on planning/ASP‑style tasks,
+* Pipeline C is best on math word problems,
+
+you can actually *deploy all three* and let the router pick.
+
+Practical implication:
+
+* You can spin up new **domain‑specific reasoning skills** by:
+
+  * adding a small domain benchmark suite,
+  * running OpenEvolve for a while,
+  * then freezing the Pareto‑optimal translator for that domain.
+
+From your perspective, “adding a new reasoning skill” becomes:
+
+> add data + run evolution → get a new compiler → wire it into the router.
+
+No re‑training of the LLM itself.
+
+---
+
+## 6. Better interpretability & debugging of reasoning
+
+Because the discovered program outputs SymIL (and then FOL/ASP/Scallop), you get:
+
+* Explicit **symbolic traces** of each decision, not opaque embeddings.
+* Ability to inspect the “proof” or model that the solver found.
+* The option to log SymIL + solver outputs for any user query.
+
+This means that when something is wrong, you’re debugging:
+
+* the **translator code/prompt** that OpenEvolve produced,
+* or the SymIL design,
+
+instead of trying to divine what went wrong in a 100‑layer transformer. This is exactly the “separation of concerns” Logic‑LM and similar systems advocate: LLM for translation, solver for inference.
+
+---
+
+## 7. A testbed for the intermediate language problem itself
+
+The “intermediate language problem” paper basically says: *choice of IL and translation strategy massively affects reasoning performance, and LLMs alone are bad at picking the right one*.
+
+SymPrompt + OpenEvolve is, in effect, a **practical lab** for that:
+
+* You can empirically compare SymIL variants, solver combinations, and translation algorithms.
+* The “best program” is evidence about which IL/compilation strategy works best for your tasks.
+* You can iterate: change SymIL, rerun evolution, compare fitness across generations.
+
+Long‑term, that’s valuable beyond just your tool; it’s data on what kinds of intermediate representations make LLM‑based reasoning actually robust.
+
+---
+
+### In one sentence
+
+The practical implication of discovering your “best program” is that SymPrompt stops being a cute prototype and becomes a **reliable, reusable reasoning engine**: a learned compiler from natural language into logic that you can plug into solvers, guardrail LLM answers with, specialize for domains, and iterate on as your tasks and benchmarks grow.
+
+[1]: https://arxiv.org/abs/2305.12295?utm_source=chatgpt.com "Logic-LM: Empowering Large Language Models with Symbolic Solvers for Faithful Logical Reasoning"
+[2]: https://openreview.net/pdf?id=nWXMv949ZH&utm_source=chatgpt.com "LOGIC-LM: Empowering Large Language Models with ..."
+[3]: https://arxiv.org/html/2502.17216v1?utm_source=chatgpt.com "Making LLMs Reason? The Intermediate Language ..."
+[4]: https://github.com/algorithmicsuperintelligence/openevolve?utm_source=chatgpt.com "algorithmicsuperintelligence/openevolve: Open-source ..."

@@ -10,7 +10,7 @@ llm:
   temperature: 0.7
   max_tokens: 8192
   timeout: 900
-  retries: 3
+  retries: 10
   retry_delay: 5
 
 prompt:
@@ -40,4 +40,4 @@ evaluator:
   enable_artifacts: true
   cascade_evaluation: false
   timeout: 900
-  parallel_evaluations: 1
+  parallel_evaluations: 10

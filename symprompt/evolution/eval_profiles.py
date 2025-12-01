@@ -8,13 +8,15 @@ import importlib.util
 import json
 import sys
 
-from symprompt.evolution.eval_pipeline import evaluate_system
+from openevolve.evaluation_result import EvaluationResult
+
+from symprompt.evolution.eval_pipeline import evaluate_fast
 from symprompt.llm.sync_client import build_default_sync_client
 from symprompt.router.smart_router import SmartRouter
 from symprompt.translation.pipeline import TranslationPipeline
 
 
-def evaluate(program_path: str) -> Dict[str, float]:
+def evaluate(program_path: str) -> EvaluationResult:
     """
     OpenEvolve evaluator for SymIL profile evolution.
 
@@ -47,38 +49,63 @@ def evaluate(program_path: str) -> Dict[str, float]:
             benchmarks.extend(data)
 
     if not benchmarks:
-        return {"combined_score": 0.0}
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": "No benchmarks found"},
+        )
 
     # Load candidate profiles module
     try:
         spec = importlib.util.spec_from_file_location("candidate_profiles", program_path)
         if spec is None or spec.loader is None:
-            return {"combined_score": 0.0}
+            return EvaluationResult(
+                metrics={"combined_score": 0.0},
+                artifacts={"error": "Failed to create module spec"},
+            )
         module = importlib.util.module_from_spec(spec)
         sys.modules["symprompt.symil.profiles"] = module  # override for get_profile
         spec.loader.exec_module(module)
-    except Exception:
-        return {"combined_score": 0.0}
+    except Exception as e:
+        return EvaluationResult(
+            metrics={"combined_score": 0.0},
+            artifacts={"error": f"Module load error: {e}"},
+        )
 
     llm_client = build_default_sync_client()
     pipeline = TranslationPipeline.from_llm_client(llm_client)
     router = SmartRouter()
 
     start = perf_counter()
-    result = evaluate_system(router, pipeline, benchmarks)
+    # Use parallel evaluation with artifacts for LLM feedback
+    eval_with_artifacts = evaluate_fast(router, pipeline, benchmarks, collect_artifacts=True, show_progress=True)
     elapsed = (perf_counter() - start) * 1000.0
 
-    accuracy = max(result.tier1_accuracy, result.tier2_accuracy)
-    combined_score = 0.6 * accuracy + 0.4 * result.syntactic_validity
+    eval_result = eval_with_artifacts.result
+    artifacts = eval_with_artifacts.artifacts
 
-    return {
+    # Profile evolution fitness function
+    # Profiles provide translation hints and solver preferences
+    # Weights: accuracy 50%, routing 25%, latency 15%, syntactic 10%
+    accuracy = max(eval_result.tier1_accuracy, eval_result.tier2_accuracy)
+    latency_score = 1.0 if eval_result.tier1_p95_latency_ms < 50 else 50.0 / max(eval_result.tier1_p95_latency_ms, 1.0)
+
+    combined_score = (
+        0.50 * accuracy
+        + 0.25 * eval_result.routing_score
+        + 0.15 * latency_score
+        + 0.10 * eval_result.syntactic_validity
+    )
+
+    metrics = {
         "combined_score": combined_score,
-        "tier1_accuracy": result.tier1_accuracy,
-        "tier2_accuracy": result.tier2_accuracy,
-        "syntactic_validity": result.syntactic_validity,
-        "tier1_p95_latency_ms": result.tier1_p95_latency_ms,
-        "tier2_p95_latency_ms": result.tier2_p95_latency_ms,
-        "routing_score": result.routing_score,
+        "tier1_accuracy": eval_result.tier1_accuracy,
+        "tier2_accuracy": eval_result.tier2_accuracy,
+        "syntactic_validity": eval_result.syntactic_validity,
+        "tier1_p95_latency_ms": eval_result.tier1_p95_latency_ms,
+        "tier2_p95_latency_ms": eval_result.tier2_p95_latency_ms,
+        "routing_score": eval_result.routing_score,
+        "latency_score": latency_score,
         "evaluation_time_ms": elapsed,
     }
 
+    return EvaluationResult(metrics=metrics, artifacts=artifacts)
