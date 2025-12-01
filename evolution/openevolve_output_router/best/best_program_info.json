@@ -1,0 +1,20 @@
+{
+  "id": "e0e2ea90-1f4e-440a-9ff3-6b26215c13e1",
+  "generation": 1,
+  "iteration": 1,
+  "timestamp": 1764607217.273736,
+  "parent_id": "9ebb97f2-ef3a-4838-ba8a-68b2af46262c",
+  "metrics": {
+    "combined_score": 0.7244186046511628,
+    "tier1_accuracy": 0.6744186046511628,
+    "tier2_accuracy": 0.0,
+    "syntactic_validity": 0.8488372093023255,
+    "tier1_p95_latency_ms": 11.77541702054441,
+    "tier2_p95_latency_ms": 0.0,
+    "routing_score": 0.5930232558139535,
+    "latency_score": 1.0,
+    "evaluation_time_ms": 371185.59562496375
+  },
+  "language": "python",
+  "saved_at": 1764607293.093332
+}

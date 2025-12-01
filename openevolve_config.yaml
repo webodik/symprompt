@@ -24,9 +24,9 @@ prompt:
 database:
   db_path: "evolution/openevolve_output/evolution.db"
   in_memory: false
-  population_size: 20
+  population_size: 40
   archive_size: 20
-  num_islands: 1
+  num_islands: 4
   migration_interval: 10
   migration_rate: 0.1
   feature_dimensions:

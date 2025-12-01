@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Any, Callable, Dict
 
 from symprompt.reasoning.portfolio import PortfolioDecision
@@ -19,6 +20,7 @@ class EscalationResult:
     result: Dict[str, Any]
     used_level: int
     symil: SymIL
+    solver_latency_ms: float
 
 
 def translate_and_solve_with_escalation(
@@ -37,11 +39,12 @@ def translate_and_solve_with_escalation(
     and higher levels are available, escalate to the next level.
 
     Returns an EscalationResult with the final solver result, the level
-    used, and the last SymIL program.
+    used, the last SymIL program, and cumulative solver latency in ms.
     """
     last_result: Dict[str, Any] | None = None
     last_symil: SymIL | None = None
     used_level = decision.symil_level
+    total_solver_latency_ms = 0.0
 
     profile = get_profile(decision.profile_name)
     base_hints = profile.translation_hints
@@ -59,7 +62,9 @@ def translate_and_solve_with_escalation(
                 profile_name=decision.profile_name,
                 preferred_solver=decision.preferred_solver,
             )
+            solve_start = perf_counter()
             result = solve_fn(symil=symil, decision=portfolio_decision)
+            total_solver_latency_ms += (perf_counter() - solve_start) * 1000.0
 
             last_result = result
             last_symil = symil
@@ -80,5 +85,9 @@ def translate_and_solve_with_escalation(
             break
 
     assert last_result is not None and last_symil is not None
-    return EscalationResult(result=last_result, used_level=used_level, symil=last_symil)
-
+    return EscalationResult(
+        result=last_result,
+        used_level=used_level,
+        symil=last_symil,
+        solver_latency_ms=total_solver_latency_ms,
+    )

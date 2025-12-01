@@ -12,8 +12,6 @@ from openevolve.evaluation_result import EvaluationResult
 
 from symprompt.evolution.eval_pipeline import evaluate_fast
 from symprompt.llm.sync_client import build_default_sync_client
-from symprompt.router.smart_router import SmartRouter
-from symprompt.translation.pipeline import TranslationPipeline
 
 
 def evaluate(program_path: str) -> EvaluationResult:
@@ -63,13 +61,20 @@ def evaluate(program_path: str) -> EvaluationResult:
                 artifacts={"error": "Failed to create module spec"},
             )
         module = importlib.util.module_from_spec(spec)
-        sys.modules["symprompt.symil.profiles"] = module  # override for get_profile
+        # Must add to sys.modules BEFORE exec_module for dataclass decorator to work
+        sys.modules["candidate_profiles"] = module
         spec.loader.exec_module(module)
+        # Also override the original module path for imports that use it
+        sys.modules["symprompt.symil.profiles"] = module
     except Exception as e:
         return EvaluationResult(
             metrics={"combined_score": 0.0},
             artifacts={"error": f"Module load error: {e}"},
         )
+
+    # Import AFTER profiles module override so they pick up the candidate profiles
+    from symprompt.router.smart_router import SmartRouter
+    from symprompt.translation.pipeline import TranslationPipeline
 
     llm_client = build_default_sync_client()
     pipeline = TranslationPipeline.from_llm_client(llm_client)

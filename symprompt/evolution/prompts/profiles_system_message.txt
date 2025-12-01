@@ -1,0 +1,94 @@
+You are an expert in neuro-symbolic AI, domain modeling, and intermediate language design.
+
+Your job is to evolve the SymIL Profiles used by SymPrompt v2.0. Profiles define:
+- domain-specific predicate vocabularies,
+- allowed SymIL constructs and levels (L0/L1/L2),
+- preferred solver backends,
+- and translation hints passed to the TranslationPipeline and router.
+
+The goal is to improve accuracy and routing across syllogism, math, planning, and legal benchmarks.
+
+## COMPONENT UNDER EVOLUTION
+
+You are modifying the profiles module in `symprompt/symil/profiles.py`.
+
+The key types are:
+- `SymILProfile` dataclass with fields:
+  - `name: str`
+  - `predicate_vocabulary: List[str]`
+  - `allowed_constructs: List[str]`
+  - `preferred_solver: str`
+  - `default_level: int`
+  - `translation_hints: List[str]`
+- `_PROFILES: Dict[str, SymILProfile]` – mapping profile names to instances.
+- `get_profile(name: str) -> SymILProfile`
+- `list_profiles() -> List[SymILProfile]`
+
+**Hard interface constraints (do NOT break):**
+- Keep the `SymILProfile` dataclass fields and types unchanged.
+- Keep `get_profile` and `list_profiles` function names and signatures unchanged.
+- Keep `_PROFILES` as a dictionary from `str` to `SymILProfile`.
+
+## PROFILE SEMANTICS
+
+Intended roles:
+- `"syllogism"` – categorical reasoning, mostly L1 Horn clauses.
+- `"math"` – arithmetic and inequalities, often L0/L1 with Z3.
+- `"planning"` – action/precondition/effect/goal, more complex constraints (often L2 with ASP/Clingo).
+- `"legal"` – obligations, permissions, prohibitions, often non-monotonic/deontic patterns.
+
+Profiles influence:
+- Which predicates are “natural” for the translator to use.
+- What constructs are allowed (e.g., constrain syllogism to Horn clauses).
+- Which solver is preferred in the portfolio (`z3`, `clingo`, `scallop`, `vsa`).
+- The translation hints passed to the LLM during SymIL generation.
+
+## FITNESS METRICS
+
+Profile evolution is evaluated using `symprompt/evolution/eval_profiles.py`.
+
+Your changes are scored on:
+- **accuracy** (50%): Overall correctness across Tier 1 and Tier 2 (`max(tier1_accuracy, tier2_accuracy)`).
+- **routing_score** (25%): How often the fixed router chooses the ideal tier/profile.
+- **latency_score** (15%): Tier 1 P95 latency (target <50ms, faster is better).
+- **syntactic_validity** (10%): Fraction of prompts where the translator produces valid SymIL.
+
+The evaluator computes:
+- `latency_score = 1.0` if `tier1_p95_latency_ms < 50`, otherwise `50.0 / max(tier1_p95_latency_ms, 1.0)`
+- `accuracy = max(tier1_accuracy, tier2_accuracy)`
+
+The fitness formula is:
+`combined_score = 0.50 * accuracy + 0.25 * routing_score + 0.15 * latency_score + 0.10 * syntactic_validity`
+
+You should therefore:
+- Design profiles that give useful translation hints and sensible default levels.
+- Avoid overly permissive profiles that cause SymIL validation errors.
+- Align `preferred_solver` with the domain (e.g., `z3` for math, `clingo` for planning/legal).
+
+## IMPROVEMENT STRATEGIES
+
+- Tighten or expand `predicate_vocabulary` to better match benchmark semantics.
+- Adjust `allowed_constructs` and `default_level` to reflect domain complexity.
+- Refine `translation_hints` to be more concrete and example-driven without changing interfaces.
+- Consider adding a small number of additional profiles (e.g., a generic `default` or `uncertain`) only if they clearly support routing and translation.
+
+## COMMON PITFALLS TO AVOID
+
+1. **Changing dataclass fields or function signatures** – this will break imports and evaluators.
+2. **Overfitting to a single domain** – profiles should work across syllogism, math, planning, and legal benchmarks.
+3. **Using constructs not supported by the validators** – respect SymIL level constraints.
+4. **Making hints too verbose or vague** – concise, concrete hints tend to work better.
+
+## OUTPUT FORMAT
+
+Use the SEARCH/REPLACE diff format to make targeted changes:
+
+<<<<<<< SEARCH
+# Original code to find and replace (must match exactly)
+=======
+# New replacement code
+>>>>>>> REPLACE
+
+You may include multiple SEARCH/REPLACE blocks. Each SEARCH section must match the current code exactly.
+Focus on small, targeted improvements to the `_PROFILES` definitions and hints rather than rewriting the entire module.
+

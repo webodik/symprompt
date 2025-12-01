@@ -53,7 +53,7 @@ def _translate_and_solve_with_escalation(
     text: str,
     solve_fn: Callable[..., Dict[str, str]],
     max_level: int = 2,
-) -> tuple[Dict[str, str], int]:
+) -> tuple[Dict[str, str], int, float]:
     """
     Wrapper around the shared translate_and_solve_with_escalation helper
     that preserves the original (result, used_level) return shape.
@@ -66,7 +66,7 @@ def _translate_and_solve_with_escalation(
         solve_fn=solve_fn,
         max_level=max_level,
     )
-    return escalation.result, escalation.used_level
+    return escalation.result, escalation.used_level, escalation.solver_latency_ms
 
 
 def evaluate_system(
@@ -92,9 +92,8 @@ def evaluate_system(
         routing_total += 1
         syntactic_total += 1
 
-        start = perf_counter()
         try:
-            result, used_level = _translate_and_solve_with_escalation(
+            result, used_level, solver_latency_ms = _translate_and_solve_with_escalation(
                 pipeline,
                 validator,
                 decision,
@@ -106,18 +105,18 @@ def evaluate_system(
         except Exception:
             # Translation or validation failed - count as syntactic failure
             result = {"status": "UNKNOWN"}
-        elapsed_ms = (perf_counter() - start) * 1000.0
+            solver_latency_ms = 0.0
 
         correct = str(result.get("status")) == expected
 
         if decision.tier == 1:
             tier1_total += 1
-            tier1_latencies.append(elapsed_ms)
+            tier1_latencies.append(solver_latency_ms)
             if correct:
                 tier1_correct += 1
         else:
             tier2_total += 1
-            tier2_latencies.append(elapsed_ms)
+            tier2_latencies.append(solver_latency_ms)
             if correct:
                 tier2_correct += 1
 
@@ -255,9 +254,13 @@ def evaluate_fast(
     """
     validator = SymILValidator()
 
-    # Default to 8 workers or EVAL_PARALLEL_BENCHMARKS env var
+    # Default to env var but cap per-process thread count for stability.
+    # High concurrency should primarily come from process-level parallelism
+    # (OpenEvolve's evaluator.parallel_evaluations and islands), not an
+    # unbounded number of threads inside each worker.
     if max_workers is None:
-        max_workers = int(os.environ.get("EVAL_PARALLEL_BENCHMARKS", "16"))
+        env_workers = int(os.environ.get("EVAL_PARALLEL_BENCHMARKS", "16"))
+        max_workers = max(1, min(env_workers, 8))
 
     total = len(benchmarks)
     if show_progress:

@@ -36,6 +36,10 @@ def main() -> None:
 
     config = Config.from_yaml(config_path)
 
+    # Use the profiles-specific system prompt template
+    config.prompt.system_message = "profiles_system_message"
+    config.prompt.evaluator_system_message = "profiles_system_message"
+
     if args.iterations is not None:
         config.max_iterations = args.iterations
 
@@ -89,4 +93,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -39,10 +39,12 @@ The pipeline must handle:
 
 Your changes are scored on:
 - **accuracy** (60%): Correct solver results vs expected answers
-- **syntactic_validity** (25%): Valid SymIL that passes validation
-- **latency_score** (15%): Solver execution time (target <50ms)
+- **routing_score** (15%): How often the router picks the ideal tier/profile (Tier 1 vs Tier 2, bypass vs symbolic)
+- **syntactic_validity** (10%): Valid SymIL that passes validation
+- **latency_score** (15%): Solver execution time (Tier 1 P95, target <50ms)
 
-The formula: `combined_score = 0.60 * accuracy + 0.25 * syntactic_validity + 0.15 * latency_score`
+The formula in `symprompt/evolution/eval_pipeline.py` is:
+`combined_score = 0.60 * accuracy + 0.15 * latency_score + 0.15 * routing_score + 0.10 * syntactic_validity`
 
 ## IMPROVEMENT STRATEGIES
 

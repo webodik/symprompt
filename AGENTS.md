@@ -60,8 +60,11 @@ This repository contains the SymPrompt framework: a Python 3.11+ toolkit for tra
     - Translation evolution (`symprompt/evolution/run_translation_evolution.py`),
     - Router evolution (`symprompt/evolution/run_router_evolution.py`, evaluator `symprompt/evolution/eval_router.py`),
     - SymIL profile evolution (`symprompt/evolution/run_profile_evolution.py`, evaluator `symprompt/evolution/eval_profiles.py`),
-    each backing up the evolution database before runs.
+    each backing up the evolution database before runs and using component-specific system prompts under `symprompt/evolution/prompts/`. Translation evolution supports:
+    - Phase 1 (Tier 1 focus) via `symprompt/evolution/eval_pipeline.py`
+    - Phase 2 (full system with escalation and domain-weighted accuracy) via `symprompt/evolution/eval_pipeline_phase2.py` and the `--mode phase2` flag / `EVOLVE_MODE=phase2`.
   - Evolution seeding helpers in `symprompt/evolution/seeds.py` and `scripts/extract_translation_seeds.py` to export top programs from `evolution/openevolve_output/evolution.db` into `evolution/seeds/` for reuse.
+  - Evolution prompt inspection helper in `scripts/inspect_evolution_prompt.py` that reconstructs the LLM user prompt (including the `## Last Execution Output` section) for selected programs based on stored artifacts.
   - CLI entrypoint in `symprompt/integration/cli.py` using LiteLLM (`openrouter/x-ai/grok-4.1-fast:free` by default) to show tier/profile, SymIL level, solver status, and optional natural-language explanations (`--show-symil`, `--explain`), plus a verification mode using `symprompt/integration/verification.py`.
   - Scallop backend (`symprompt/reasoning/scallop_runner.py`) now uses the real `scallopy` Python binding when installed to classify simple Level 0 fact/query programs and small Level 1 Horn-style rule sets, while remaining optional and returning `UNKNOWN` when the binding is absent; VSA backend (`symprompt/reasoning/vsa_encoder.py`, `vsa_runner.py`) encodes SymIL facts into a high-dimensional memory vector and provides a similarity-based soft status for Level 0 atomic queries that the Tier 2 portfolio can use as a conservative tie-breaker.
 - v2 development is tracked in `docs/SymPrompt_dev_plan_v2.md` under the "Execution Status" section.

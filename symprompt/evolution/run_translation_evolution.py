@@ -140,6 +140,12 @@ def main() -> None:
         action="store_true",
         help="Resume from last checkpoint (evolution.db)",
     )
+    parser.add_argument(
+        "--mode",
+        choices=["phase1", "phase2"],
+        default="phase1",
+        help="Evolution mode: phase1 (Tier 1 focus, fast evaluator) or phase2 (full system with escalation and domain-weighted accuracy).",
+    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -147,6 +153,13 @@ def main() -> None:
     config_path = root / "openevolve_config.yaml"
 
     config = Config.from_yaml(config_path)
+
+    # Use the translation-specific system prompt template
+    # (lives under symprompt/evolution/prompts/translation_system_message.txt
+    # or falls back to system_message.txt if not customized further).
+    # Keep template_dir from config; only override message keys here if needed.
+    config.prompt.system_message = "system_message"
+    config.prompt.evaluator_system_message = "system_message"
 
     if args.iterations is not None:
         config.max_iterations = args.iterations
@@ -213,7 +226,10 @@ def main() -> None:
                 print(f"Created evolution DB backup at {backup_path}")
 
     initial_program = root / "symprompt" / "translation" / "pipeline.py"
-    evaluator = root / "symprompt" / "evolution" / "eval_pipeline.py"
+    if args.mode == "phase2":
+        evaluator = root / "symprompt" / "evolution" / "eval_pipeline_phase2.py"
+    else:
+        evaluator = root / "symprompt" / "evolution" / "eval_pipeline.py"
 
     metrics = asyncio.run(
         run_evolution_with_final_save(

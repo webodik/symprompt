@@ -169,14 +169,23 @@ symprompt/
 SymPrompt supports evolutionary optimization of three components:
 
 ```bash
-# Evolve the translation pipeline
+# Evolve the translation pipeline (TranslationPipeline in symprompt/translation/pipeline.py)
+# Phase 1 (Tier 1 focus, fast evaluator)
 python -m symprompt.evolution.run_translation_evolution
 
-# Evolve the router
+# Phase 2 (full system, escalation + domain-weighted accuracy)
+python -m symprompt.evolution.run_translation_evolution --mode phase2
+
+# Evolve the router (SmartRouter in symprompt/router/smart_router.py)
 python -m symprompt.evolution.run_router_evolution
 
-# Evolve domain profiles
+# Evolve domain profiles (SymIL profiles in symprompt/symil/profiles.py)
 python -m symprompt.evolution.run_profile_evolution
+
+# Inspect evolution prompts and artifacts (diagnostic tool)
+python -m scripts.inspect_evolution_prompt --kind translation
+python -m scripts.inspect_evolution_prompt --kind router
+python -m scripts.inspect_evolution_prompt --kind profiles
 ```
 
 ## Documentation

@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 """
-Evolution runner wrapper script.
+Translation pipeline evolution runner.
+
+Evolves the TranslationPipeline component (NL -> SymIL translation).
 
 Usage:
     EVOLVE_LLM_MODEL="openrouter/x-ai/grok-4.1-fast:free" \
     EVOLVE_ITERATIONS=100 \
-    .venv/bin/python scripts/run_evolution.py
+    .venv/bin/python scripts/run_translation_evolution.py
 
 Environment variables:
     EVOLVE_LLM_MODEL: LLM model to use (default: from config)
@@ -34,6 +36,9 @@ def main() -> None:
     # Parse environment variables
     iterations_str = os.environ.get("EVOLVE_ITERATIONS")
     resume = os.environ.get("EVOLVE_RESUME", "").lower() in ("1", "true", "yes")
+    mode = os.environ.get("EVOLVE_MODE", "phase1").lower()
+    if mode not in ("phase1", "phase2"):
+        mode = "phase1"
 
     # Set model via SYMPROMPT_LLM_MODEL (used by the runner)
     llm_model = os.environ.get("EVOLVE_LLM_MODEL")
@@ -46,6 +51,8 @@ def main() -> None:
         sys.argv.extend(["-n", iterations_str])
     if resume:
         sys.argv.append("--resume")
+    if mode:
+        sys.argv.extend(["--mode", mode])
 
     # Import and run
     from symprompt.evolution.run_translation_evolution import main as run_main

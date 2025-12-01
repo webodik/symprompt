@@ -86,18 +86,40 @@ Evolution targets three components:
 
 ### Phase 1 Fitness (current - Tier 1 focus)
 Fitness function in `symprompt/evolution/eval_pipeline.py` combines:
-- Accuracy (60%) - Tier 1 accuracy on syllogism benchmarks
-- Latency score (15%) - Bonus for <50ms P95 latency
+- Accuracy (60%) - Tier 1 accuracy on multi-domain benchmarks
+- Latency score (15%) - Bonus for <50ms Tier 1 P95 latency
 - Routing score (15%) - Correct tier selection for each benchmark
-- Syntactic validity (10%) - SymIL parses without errors
+- Syntactic validity (10%) - SymIL passes validation
 
 ### Phase 2+ Fitness (future - full system)
-- Tier-weighted accuracy (50%)
-- Latency score (25%)
-- Routing score (15%)
-- Syntactic validity (10%)
+- Implemented in `symprompt/evolution/eval_pipeline_phase2.py`:
+  - Domain-weighted, tier-weighted accuracy (50%) using `EvaluationConfig.domain_weights`
+  - Latency score (25%) combining Tier 1 and Tier 2 P95 latencies (50ms / 500ms targets)
+  - Routing score (15%) for correct tier selection
+  - Syntactic validity (10%) based on escalation-driven translation + validation
 
 Config: `openevolve_config.yaml`
+
+### Evolution prompts and diagnostics
+
+- System prompts for evolution live in `symprompt/evolution/prompts/`:
+  - `system_message.txt` for translation (TranslationPipeline)
+  - `router_system_message.txt` for SmartRouter
+  - `profiles_system_message.txt` for SymIL profiles
+- The default `diff_user` template (from OpenEvolve) includes an `{artifacts}` slot; SymPrompt evaluators populate this with:
+  - `benchmark_results`: PASS/FAIL per benchmark with translation/solver errors
+  - `validation_errors`: aggregated SymIL validation failures
+- Use `scripts/inspect_evolution_prompt.py` to reconstruct the LLM user prompt (including the `## Last Execution Output` section) for selected programs:
+
+```bash
+python -m scripts.inspect_evolution_prompt --kind translation
+python -m scripts.inspect_evolution_prompt --kind router
+python -m scripts.inspect_evolution_prompt --kind profiles
+
+# Run Phase 1 vs Phase 2 translation evolution
+EVOLVE_MODE=phase1 .venv/bin/python scripts/run_translation_evolution.py
+EVOLVE_MODE=phase2 .venv/bin/python scripts/run_translation_evolution.py
+```
 
 ## Configuration
 
